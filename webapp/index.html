@@ -462,6 +462,11 @@
 </div>
 
 <div id="errorBox" class="error-box" style="display:none;"></div>
+<div id="getkeysHint" class="error-box" style="display:none; background: rgba(245, 158, 11, 0.1); border-color: var(--yellow); border-left-color: var(--yellow); color: #fcd34d;">
+  <strong>CORS Error ဖြစ်နေပါသလား?</strong><br><br>
+  Browser ကနေ တိုက်ရိုက် fetch လုပ်ခွင့်မပေးတဲ့ link တွေအတွက် Bot ဆီကို အောက်ပါ command ပို့ပြီး ယူနိုင်ပါတယ်:<br><br>
+  <code id="getkeysCommand" style="display: block; background: #000; padding: 10px; border-radius: 6px; margin-top: 8px; user-select: all; font-family: monospace;">/getkeys </code>
+</div>
 <div id="statsBar" class="stats-bar" style="display:none;"></div>
 <div id="filterTabs" class="filter-tabs" style="display:none;"></div>
 <div id="keysContainer" class="keys-container"></div>
@@ -644,6 +649,10 @@
           content = await resp.text();
         } catch(e2) {
           showError(`Link ကို fetch လုပ်မရပါ: ${e2.message}\n\nSub link ထဲကစာတွေကို copy ကူးပြီး တိုက်ရိုက် paste လုပ်ကြည့်ပါ။`);
+          if (e2.message.includes('fetch') || e2.message.includes('Network') || e2.message.includes('Failed') || e2.message.includes('timed out')) {
+            document.getElementById('getkeysHint').style.display = 'block';
+            document.getElementById('getkeysCommand').innerText = '/getkeys ' + input;
+          }
           hideLoading();
           return;
         }
@@ -873,6 +882,8 @@
 
   function hideError() {
     document.getElementById('errorBox').style.display = 'none';
+    const hint = document.getElementById('getkeysHint');
+    if (hint) hint.style.display = 'none';
   }
 
   function clearAll() {

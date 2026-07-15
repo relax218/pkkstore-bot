@@ -1,6 +1,8 @@
 import os
 import json
 import base64
+import urllib.request
+import urllib.error
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
 
@@ -105,6 +107,56 @@ async def remove_rule(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         await update.message.reply_text(f"❌ ရှာမတွေ့ပါ: {old_domain}")
 
+async def get_keys(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if len(context.args) != 1:
+        await update.message.reply_text("ℹ️ အသုံးပြုပုံ: /getkeys <sub_link>\nဥပမာ: /getkeys https://vpn.domain/sub/123")
+        return
+        
+    sub_link = context.args[0]
+    
+    # Optional: If the user provides an old link, we can auto-convert it first
+    for old_domain, new_domain in mapping_rules.items():
+        if old_domain in sub_link:
+            sub_link = sub_link.replace(old_domain, new_domain)
+            
+    processing_msg = await update.message.reply_text("⏳ Server ဘက်မှ fetch လုပ်နေပါသည်...")
+    
+    try:
+        req = urllib.request.Request(sub_link, headers={'User-Agent': 'Mozilla/5.0'})
+        with urllib.request.urlopen(req, timeout=10) as response:
+            content = response.read().decode('utf-8')
+            
+        # Try to decode base64 if it's base64 encoded
+        try:
+            # Add padding if needed
+            padded = content + '=' * (-len(content) % 4)
+            decoded = base64.b64decode(padded).decode('utf-8')
+            content = decoded
+        except Exception:
+            pass # Not base64, use raw content
+            
+        keys = [line.strip() for line in content.split('\n') if line.strip() and ('://' in line)]
+        
+        if not keys:
+            await processing_msg.edit_text("❌ Link ထဲတွင် key များ မတွေ့ပါ။")
+            return
+            
+        # Limit to first 20 keys if too many to avoid Telegram message length limit
+        display_keys = keys[:20]
+        msg = f"✅ တွေ့ရှိသော Key များ ({len(keys)} ခု):\n\n"
+        for i, key in enumerate(display_keys, 1):
+            msg += f"`{key}`\n\n"
+            
+        if len(keys) > 20:
+            msg += f"... အခြား key {len(keys) - 20} ခု ကျန်သေးသည်။"
+            
+        await processing_msg.edit_text(msg, parse_mode="Markdown")
+        
+    except urllib.error.URLError as e:
+        await processing_msg.edit_text(f"❌ Fetch လုပ်၍မရပါ (CORS ပြဿနာမဟုတ်ပါ၊ Server သို့ ဆက်သွယ်၍မရပါ):\n{str(e)}")
+    except Exception as e:
+        await processing_msg.edit_text(f"❌ Error ဖြစ်ပေါ်နေပါသည်:\n{str(e)}")
+
 async def list_rules(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != OWNER_ID:
         await update.message.reply_text("❌ ဒီ command ကို Owner သာ အသုံးပြုနိုင်ပါတယ်။")
@@ -127,6 +179,7 @@ if __name__ == '__main__':
     app.add_handler(CommandHandler("addrule", add_rule))
     app.add_handler(CommandHandler("delrule", remove_rule))
     app.add_handler(CommandHandler("rules", list_rules))
+    app.add_handler(CommandHandler("getkeys", get_keys))
     
     # Handle normal messages
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
