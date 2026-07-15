@@ -4,7 +4,7 @@ import base64
 import urllib.request
 import urllib.error
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
 
 # Configuration
 BOT_TOKEN = "YOUR_BOT_TOKEN_HERE" # Replace with your actual bot token
@@ -149,8 +149,17 @@ async def get_keys(update: Update, context: ContextTypes.DEFAULT_TYPE):
             
         if len(keys) > 20:
             msg += f"... အခြား key {len(keys) - 20} ခု ကျန်သေးသည်။"
+
+        # Store all keys in context for copy-all callback
+        context.user_data['last_keys'] = keys
+
+        # Add Copy All Keys button below the message
+        keyboard = [
+            [InlineKeyboardButton(f"📋 Copy All Keys ({len(keys)} ခု)", callback_data="copy_all_keys")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
             
-        await processing_msg.edit_text(msg, parse_mode="Markdown")
+        await processing_msg.edit_text(msg, parse_mode="Markdown", reply_markup=reply_markup)
         
     except urllib.error.URLError as e:
         await processing_msg.edit_text(f"❌ Fetch လုပ်၍မရပါ (CORS ပြဿနာမဟုတ်ပါ၊ Server သို့ ဆက်သွယ်၍မရပါ):\n{str(e)}")
@@ -172,6 +181,44 @@ async def list_rules(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
     await update.message.reply_text(msg, parse_mode="Markdown")
 
+async def copy_all_keys_callback(update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+
+    keys = context.user_data.get('last_keys', [])
+    if not keys:
+        await query.answer("❌ Key များ မရှိပါ။ /getkeys ကို အလ်ပြန်သုံးပါ။", show_alert=True)
+        return
+
+    all_keys_text = "\n".join(keys)
+
+    # Telegram message max length is 4096 chars
+    # Send as a separate message so user can long-press to copy all
+    if len(all_keys_text) <= 4096:
+        await query.message.reply_text(
+            f"📋 All Keys ({len(keys)} ခု) - အောက်ပါ message ကို long-press လုပ်ပြီး copy လုပ်နိုင်ပါတယ်:\n\n"
+            f"`{all_keys_text}`",
+            parse_mode="Markdown"
+        )
+    else:
+        # Too long - split into chunks
+        chunk = ""
+        part = 1
+        for key in keys:
+            if len(chunk) + len(key) + 1 > 3800:
+                await query.message.reply_text(
+                    f"📋 Keys Part {part}:\n\n`{chunk.strip()}`",
+                    parse_mode="Markdown"
+                )
+                chunk = ""
+                part += 1
+            chunk += key + "\n"
+        if chunk:
+            await query.message.reply_text(
+                f"📋 Keys Part {part}:\n\n`{chunk.strip()}`",
+                parse_mode="Markdown"
+            )
+
 if __name__ == '__main__':
     app = ApplicationBuilder().token(BOT_TOKEN).build()
 
@@ -180,6 +227,7 @@ if __name__ == '__main__':
     app.add_handler(CommandHandler("delrule", remove_rule))
     app.add_handler(CommandHandler("rules", list_rules))
     app.add_handler(CommandHandler("getkeys", get_keys))
+    app.add_handler(CallbackQueryHandler(copy_all_keys_callback, pattern="^copy_all_keys$"))
     
     # Handle normal messages
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
