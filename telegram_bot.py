@@ -1,11 +1,15 @@
 import os
 import json
-from telegram import Update
+import base64
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
 
 # Configuration
 BOT_TOKEN = "YOUR_BOT_TOKEN_HERE" # Replace with your actual bot token
 OWNER_ID = 123456789 # Replace with your actual Telegram User ID
+
+# Web App URL - Mini App ကို host လုပ်ထားတဲ့ URL ထည့်ပါ (e.g. GitHub Pages URL)
+WEBAPP_URL = "https://relax218.github.io/pkkstore-bot/webapp/index.html"
 
 # File to store mapping rules
 RULES_FILE = "mapping_rules.json"
@@ -15,9 +19,10 @@ def load_rules():
     if os.path.exists(RULES_FILE):
         with open(RULES_FILE, "r") as f:
             return json.load(f)
+    # Default rules as requested
     return {
-        "vpn.kiwihub.top": "pkk1.kiwihub.top",
-        "zmt.hiddenvpn.beer": "pkk.hiddenvpn.beer"
+        "vpn.domain": "pkk1.domain",
+        "zmt.domain": "pkk.domain"
     }
 
 # Save mapping rules to file
@@ -30,10 +35,17 @@ mapping_rules = load_rules()
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     welcome_msg = (
-        "မင်္ဂလာပါ။ Sub link များကို ပြောင်းလဲပေးမယ့် Bot ပါ။\n\n"
-        "Sub link တစ်ခုကို ပို့ပေးပါ၊ သတ်မှတ်ထားတဲ့ စည်းမျဉ်းတွေအတိုင်း ပြောင်းပြီး ပြန်ပို့ပေးပါမယ်။"
+        "👋 မင်္ဂလာပါ။ **PKKStore** Sub Link Changer Bot မှ ကြိုဆိုပါတယ်။\n\n"
+        "🔗 Sub link တစ်ခုကို ပို့ပေးပါ၊ သတ်မှတ်ထားတဲ့ စည်းမျဉ်းတွေအတိုင်း ပြောင်းပြီး ပြန်ပို့ပေးပါမယ်။\n\n"
+        "🔑 Key များကို ခွဲထုတ်လိုပါက အောက်ပါ 'Extract Keys' ခလုတ်ကို နှိပ်ပါ။"
     )
-    await update.message.reply_text(welcome_msg)
+    
+    keyboard = [
+        [InlineKeyboardButton("🔑 Extract Keys (PKKStore)", web_app=WebAppInfo(url=WEBAPP_URL))]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await update.message.reply_text(welcome_msg, reply_markup=reply_markup, parse_mode="Markdown")
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
@@ -47,58 +59,66 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             new_text = new_text.replace(old_domain, new_domain)
             changed = True
             
+    # Create a safe base64 version of the new link to pass to WebApp via startapp param
+    safe_b64 = base64.b64encode(new_text.encode()).decode().replace('+', '-').replace('/', '_')
+    
+    keyboard = [
+        [InlineKeyboardButton("🔑 Extract Keys from this Link", web_app=WebAppInfo(url=f"{WEBAPP_URL}?startapp={safe_b64}"))]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
     if changed:
-        await update.message.reply_text(f"ပြောင်းလဲထားသော link:\n{new_text}")
+        await update.message.reply_text(f"✅ ပြောင်းလဲထားသော link:\n\n`{new_text}`", reply_markup=reply_markup, parse_mode="Markdown")
     else:
-        await update.message.reply_text("ပြောင်းလဲရန် မလိုအပ်ပါ သို့မဟုတ် သတ်မှတ်ထားသော domain များ မပါဝင်ပါ။")
+        await update.message.reply_text("ℹ️ ပြောင်းလဲရန် မလိုအပ်ပါ သို့မဟုတ် သတ်မှတ်ထားသော domain များ မပါဝင်ပါ။\n\nအောက်ပါခလုတ်ကိုနှိပ်၍ Key များကို ထုတ်ယူနိုင်ပါသည်။", reply_markup=reply_markup)
 
 # Owner Commands
 async def add_rule(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != OWNER_ID:
-        await update.message.reply_text("ဒီ command ကို Owner သာ အသုံးပြုနိုင်ပါတယ်။")
+        await update.message.reply_text("❌ ဒီ command ကို Owner သာ အသုံးပြုနိုင်ပါတယ်။")
         return
         
     if len(context.args) != 2:
-        await update.message.reply_text("အသုံးပြုပုံ: /addrule <old_domain> <new_domain>\nဥပမာ: /addrule vpn.kiwihub.top pkk1.kiwihub.top")
+        await update.message.reply_text("ℹ️ အသုံးပြုပုံ: /addrule <old_domain> <new_domain>\nဥပမာ: /addrule vpn.domain pkk1.domain")
         return
         
     old_domain, new_domain = context.args
     mapping_rules[old_domain] = new_domain
     save_rules(mapping_rules)
     
-    await update.message.reply_text(f"စည်းမျဉ်းအသစ် ထည့်သွင်းပြီးပါပြီ:\n{old_domain} -> {new_domain}")
+    await update.message.reply_text(f"✅ စည်းမျဉ်းအသစ် ထည့်သွင်းပြီးပါပြီ:\n{old_domain} -> {new_domain}")
 
 async def remove_rule(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != OWNER_ID:
-        await update.message.reply_text("ဒီ command ကို Owner သာ အသုံးပြုနိုင်ပါတယ်။")
+        await update.message.reply_text("❌ ဒီ command ကို Owner သာ အသုံးပြုနိုင်ပါတယ်။")
         return
         
     if len(context.args) != 1:
-        await update.message.reply_text("အသုံးပြုပုံ: /delrule <old_domain>\nဥပမာ: /delrule vpn.kiwihub.top")
+        await update.message.reply_text("ℹ️ အသုံးပြုပုံ: /delrule <old_domain>\nဥပမာ: /delrule vpn.domain")
         return
         
     old_domain = context.args[0]
     if old_domain in mapping_rules:
         del mapping_rules[old_domain]
         save_rules(mapping_rules)
-        await update.message.reply_text(f"စည်းမျဉ်းကို ဖျက်လိုက်ပါပြီ: {old_domain}")
+        await update.message.reply_text(f"✅ စည်းမျဉ်းကို ဖျက်လိုက်ပါပြီ: {old_domain}")
     else:
-        await update.message.reply_text(f"ရှာမတွေ့ပါ: {old_domain}")
+        await update.message.reply_text(f"❌ ရှာမတွေ့ပါ: {old_domain}")
 
 async def list_rules(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != OWNER_ID:
-        await update.message.reply_text("ဒီ command ကို Owner သာ အသုံးပြုနိုင်ပါတယ်။")
+        await update.message.reply_text("❌ ဒီ command ကို Owner သာ အသုံးပြုနိုင်ပါတယ်။")
         return
         
     if not mapping_rules:
-        await update.message.reply_text("လက်ရှိတွင် စည်းမျဉ်းများ မရှိပါ။")
+        await update.message.reply_text("ℹ️ လက်ရှိတွင် စည်းမျဉ်းများ မရှိပါ။")
         return
         
-    msg = "လက်ရှိ စည်းမျဉ်းများ:\n"
+    msg = "📋 လက်ရှိ စည်းမျဉ်းများ:\n\n"
     for old, new in mapping_rules.items():
-        msg += f"- {old} -> {new}\n"
+        msg += f"- `{old}` ➡️ `{new}`\n"
         
-    await update.message.reply_text(msg)
+    await update.message.reply_text(msg, parse_mode="Markdown")
 
 if __name__ == '__main__':
     app = ApplicationBuilder().token(BOT_TOKEN).build()
@@ -111,5 +131,5 @@ if __name__ == '__main__':
     # Handle normal messages
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
-    print("Bot is running...")
+    print("PKKStore Bot is running...")
     app.run_polling()

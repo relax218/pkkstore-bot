@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>PKKStore VPN Key Extractor</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #1e293b;
+      --card2: #334155;
+      --accent: #3b82f6;
+      --accent2: #8b5cf6;
+      --green: #10b981;
+      --red: #ef4444;
+      --yellow: #f59e0b;
+      --cyan: #06b6d4;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --border: #334155;
+      --radius: 14px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 16px;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 24px;
+      padding-top: 10px;
+    }
+
+    .header h1 {
+      font-size: 26px;
+      font-weight: 800;
+      background: linear-gradient(135deg, #60a5fa, #a78bfa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: -0.5px;
+    }
+
+    .header p {
+      font-size: 14px;
+      color: var(--muted);
+      margin-top: 6px;
+    }
+
+    .input-section {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 18px;
+      margin-bottom: 20px;
+      border: 1px solid var(--border);
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+
+    .input-label {
+      font-size: 14px;
+      color: var(--text);
+      margin-bottom: 10px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    textarea {
+      width: 100%;
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-size: 14px;
+      padding: 12px;
+      resize: vertical;
+      min-height: 90px;
+      font-family: 'Courier New', Courier, monospace;
+      outline: none;
+      transition: all 0.2s;
+    }
+
+    textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+    }
+
+    textarea::placeholder {
+      color: var(--muted);
+      opacity: 0.7;
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 14px;
+      border: none;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: white;
+      box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3);
+    }
+
+    .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); box-shadow: 0 6px 12px rgba(59, 130, 246, 0.4); }
+    .btn-primary:active { transform: translateY(0); box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3); }
+
+    .btn-secondary {
+      background: var(--card2);
+      color: var(--text);
+    }
+
+    .btn-secondary:hover { background: #475569; }
+
+    /* Stats bar */
+    .stats-bar {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .stat-chip {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 6px 14px;
+      font-size: 13px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .stat-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    /* Filter tabs */
+    .filter-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+      overflow-x: auto;
+      padding-bottom: 6px;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .filter-tabs::-webkit-scrollbar { display: none; }
+
+    .tab {
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: var(--card);
+      color: var(--muted);
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+
+    .tab.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: white;
+    }
+
+    /* Key cards */
+    .keys-container {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .key-card {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 16px;
+      border: 1px solid var(--border);
+      transition: all 0.2s;
+    }
+
+    .key-card:hover { border-color: #475569; }
+
+    .key-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .key-type-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .protocol-badge {
+      padding: 4px 10px;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .badge-vmess    { background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); }
+    .badge-vless    { background: rgba(139, 92, 246, 0.15); color: #a78bfa; border: 1px solid rgba(139, 92, 246, 0.3); }
+    .badge-trojan   { background: rgba(239, 68, 68, 0.15);  color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+    .badge-ss       { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+    .badge-ssr      { background: rgba(6, 182, 212, 0.15);  color: #22d3ee; border: 1px solid rgba(6, 182, 212, 0.3); }
+
+    .key-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .key-info {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+
+    .info-chip {
+      background: rgba(15, 23, 42, 0.5);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 4px 8px;
+      font-size: 12px;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .key-link-box {
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px;
+      font-size: 12px;
+      font-family: 'Courier New', Courier, monospace;
+      color: #cbd5e1;
+      word-break: break-all;
+      line-height: 1.5;
+      max-height: 60px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .key-link-box.expanded {
+      max-height: none;
+    }
+
+    .key-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .btn-copy {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      background: rgba(59, 130, 246, 0.1);
+      color: #60a5fa;
+      border: 1px solid rgba(59, 130, 246, 0.2);
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .btn-copy:hover {
+      background: rgba(59, 130, 246, 0.2);
+    }
+
+    .btn-copy.copied {
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      border-color: rgba(16, 185, 129, 0.3);
+    }
+
+    .btn-expand {
+      padding: 10px 14px;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      cursor: pointer;
+      background: var(--card2);
+      color: var(--text);
+      transition: all 0.2s;
+    }
+
+    /* Copy all button */
+    .copy-all-section {
+      margin-top: 20px;
+      padding: 16px;
+      background: var(--card);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+    }
+
+    .copy-all-title {
+      font-size: 14px;
+      color: var(--text);
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+
+    .copy-all-btns {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .btn-copy-all {
+      flex: 1;
+      min-width: 120px;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .btn-copy-all-all  { background: linear-gradient(135deg, var(--accent), var(--accent2)); color: white; }
+    .btn-copy-all-vmess  { background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); }
+    .btn-copy-all-vless  { background: rgba(139, 92, 246, 0.15); color: #a78bfa; border: 1px solid rgba(139, 92, 246, 0.3); }
+    .btn-copy-all-trojan { background: rgba(239, 68, 68, 0.15);  color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+    .btn-copy-all-ss     { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+
+    /* Empty / loading states */
+    .empty-state {
+      text-align: center;
+      padding: 50px 20px;
+      color: var(--muted);
+      background: var(--card);
+      border-radius: var(--radius);
+      border: 1px dashed var(--border);
+    }
+
+    .empty-icon { font-size: 54px; margin-bottom: 16px; opacity: 0.8; }
+    .empty-title { font-size: 18px; font-weight: 600; margin-bottom: 8px; color: var(--text); }
+    .empty-desc { font-size: 14px; line-height: 1.5; }
+
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: var(--muted);
+    }
+
+    .spinner {
+      width: 36px;
+      height: 36px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 16px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .error-box {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      border-left: 4px solid var(--red);
+      border-radius: 8px;
+      padding: 14px;
+      color: #fca5a5;
+      font-size: 14px;
+      margin-bottom: 16px;
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: var(--green);
+      color: white;
+      padding: 12px 24px;
+      border-radius: 30px;
+      font-size: 14px;
+      font-weight: 600;
+      transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      z-index: 1000;
+      white-space: nowrap;
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    }
+
+    .toast.show { transform: translateX(-50%) translateY(0); }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <h1>PKKStore</h1>
+  <p>VPN Key Extractor & Manager</p>
+</div>
+
+<div class="input-section">
+  <div class="input-label">
+    <span>🔗</span> Subscription Link
+  </div>
+  <textarea id="subInput" placeholder="https://vpn.domain/sub/xxxxx&#10;သို့မဟုတ် base64 encoded sub link ထည့်ပါ..."></textarea>
+  <div class="btn-row">
+    <button class="btn btn-primary" onclick="fetchAndParse()">
+      <span>🚀</span> Get Keys
+    </button>
+    <button class="btn btn-secondary" onclick="clearAll()">
+      <span>🗑️</span> Clear
+    </button>
+  </div>
+</div>
+
+<div id="errorBox" class="error-box" style="display:none;"></div>
+<div id="statsBar" class="stats-bar" style="display:none;"></div>
+<div id="filterTabs" class="filter-tabs" style="display:none;"></div>
+<div id="keysContainer" class="keys-container"></div>
+
+<div id="copyAllSection" class="copy-all-section" style="display:none;">
+  <div class="copy-all-title">📋 Bulk Copy Options</div>
+  <div id="copyAllBtns" class="copy-all-btns"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // Init Telegram WebApp
+  const tg = window.Telegram?.WebApp;
+  if (tg) {
+    tg.ready();
+    tg.expand();
+    tg.setHeaderColor('#0f172a');
+    tg.setBackgroundColor('#0f172a');
+  }
+
+  // Pre-fill from Telegram start param
+  const startParam = tg?.initDataUnsafe?.start_param;
+  if (startParam) {
+    try {
+      const decoded = atob(startParam.replace(/-/g, '+').replace(/_/g, '/'));
+      document.getElementById('subInput').value = decoded;
+    } catch(e) {}
+  }
+
+  let allKeys = [];
+  let currentFilter = 'all';
+
+  // ─── Parsers ────────────────────────────────────────────────
+
+  function parseVmess(link) {
+    try {
+      const b64 = link.replace('vmess://', '');
+      const json = JSON.parse(atob(b64));
+      return {
+        protocol: 'vmess',
+        name: json.ps || json.remarks || 'VMess Node',
+        server: json.add || '',
+        port: json.port || '',
+        network: json.net || 'tcp',
+        tls: json.tls || '',
+        raw: link
+      };
+    } catch(e) { return null; }
+  }
+
+  function parseVless(link) {
+    try {
+      const url = new URL(link);
+      const params = Object.fromEntries(url.searchParams);
+      return {
+        protocol: 'vless',
+        name: decodeURIComponent(url.hash?.slice(1) || 'VLESS Node'),
+        server: url.hostname,
+        port: url.port,
+        network: params.type || 'tcp',
+        security: params.security || '',
+        raw: link
+      };
+    } catch(e) { return null; }
+  }
+
+  function parseTrojan(link) {
+    try {
+      const url = new URL(link);
+      const params = Object.fromEntries(url.searchParams);
+      return {
+        protocol: 'trojan',
+        name: decodeURIComponent(url.hash?.slice(1) || 'Trojan Node'),
+        server: url.hostname,
+        port: url.port,
+        network: params.type || 'tcp',
+        security: params.security || 'tls',
+        raw: link
+      };
+    } catch(e) { return null; }
+  }
+
+  function parseShadowsocks(link) {
+    try {
+      const withoutScheme = link.replace('ss://', '');
+      const hashIdx = withoutScheme.indexOf('#');
+      const name = hashIdx >= 0 ? decodeURIComponent(withoutScheme.slice(hashIdx + 1)) : 'Shadowsocks Node';
+      const main = hashIdx >= 0 ? withoutScheme.slice(0, hashIdx) : withoutScheme;
+
+      let server, port, method;
+
+      if (main.includes('@')) {
+        const [credPart, hostPart] = main.split('@');
+        let cred;
+        try { cred = atob(credPart); } catch(e) { cred = credPart; }
+        const colonIdx = cred.indexOf(':');
+        method = cred.slice(0, colonIdx);
+        const lastColon = hostPart.lastIndexOf(':');
+        server = hostPart.slice(0, lastColon);
+        port = hostPart.slice(lastColon + 1);
+      } else {
+        let decoded;
+        try { decoded = atob(main); } catch(e) { decoded = main; }
+        const atIdx = decoded.lastIndexOf('@');
+        const credStr = decoded.slice(0, atIdx);
+        const hostStr = decoded.slice(atIdx + 1);
+        const colonIdx = credStr.indexOf(':');
+        method = credStr.slice(0, colonIdx);
+        const lastColon = hostStr.lastIndexOf(':');
+        server = hostStr.slice(0, lastColon);
+        port = hostStr.slice(lastColon + 1);
+      }
+
+      return { protocol: 'ss', name, server, port, method, raw: link };
+    } catch(e) { return null; }
+  }
+
+  function parseSsr(link) {
+    try {
+      const b64 = link.replace('ssr://', '');
+      const decoded = atob(b64.replace(/-/g, '+').replace(/_/g, '/'));
+      const parts = decoded.split(':');
+      return {
+        protocol: 'ssr',
+        name: 'SSR Node',
+        server: parts[0] || '',
+        port: parts[1] || '',
+        raw: link
+      };
+    } catch(e) { return null; }
+  }
+
+  function parseLink(line) {
+    line = line.trim();
+    if (!line) return null;
+    if (line.startsWith('vmess://'))    return parseVmess(line);
+    if (line.startsWith('vless://'))    return parseVless(line);
+    if (line.startsWith('trojan://'))   return parseTrojan(line);
+    if (line.startsWith('ss://'))       return parseShadowsocks(line);
+    if (line.startsWith('ssr://'))      return parseSsr(line);
+    return null;
+  }
+
+  function decodeSubContent(text) {
+    try {
+      const cleaned = text.trim().replace(/\s/g, '');
+      const decoded = atob(cleaned.replace(/-/g, '+').replace(/_/g, '/'));
+      if (decoded.match(/(vmess|vless|trojan|ss|ssr):\/\//)) {
+        return decoded;
+      }
+    } catch(e) {}
+    return text;
+  }
+
+  // ─── Fetch & Parse ────────────────────────────────────────────
+
+  async function fetchAndParse() {
+    const input = document.getElementById('subInput').value.trim();
+    if (!input) {
+      showError('ကျေးဇူးပြု၍ Subscription link (သို့) base64 data ထည့်ပါ။');
+      return;
+    }
+
+    hideError();
+    showLoading();
+
+    let content = '';
+
+    if (input.startsWith('http://') || input.startsWith('https://')) {
+      try {
+        const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(input)}`;
+        const resp = await fetch(proxyUrl, { signal: AbortSignal.timeout(15000) });
+        if (!resp.ok) throw new Error('Fetch failed');
+        const data = await resp.json();
+        content = data.contents || '';
+      } catch(e) {
+        try {
+          const resp = await fetch(input, { signal: AbortSignal.timeout(10000) });
+          content = await resp.text();
+        } catch(e2) {
+          showError(`Link ကို fetch လုပ်မရပါ: ${e2.message}\n\nSub link ထဲကစာတွေကို copy ကူးပြီး တိုက်ရိုက် paste လုပ်ကြည့်ပါ။`);
+          hideLoading();
+          return;
+        }
+      }
+    } else {
+      content = input;
+    }
+
+    content = decodeSubContent(content);
+    const lines = content.split(/[\n\r]+/);
+    allKeys = [];
+    
+    for (const line of lines) {
+      const parsed = parseLink(line);
+      if (parsed) allKeys.push(parsed);
+    }
+
+    hideLoading();
+
+    if (allKeys.length === 0) {
+      showEmpty();
+      return;
+    }
+
+    renderAll();
+  }
+
+  // ─── Render ───────────────────────────────────────────────────
+
+  function renderAll() {
+    renderStats();
+    renderFilterTabs();
+    renderKeys();
+    renderCopyAll();
+  }
+
+  function renderStats() {
+    const counts = {};
+    for (const k of allKeys) {
+      counts[k.protocol] = (counts[k.protocol] || 0) + 1;
+    }
+
+    const colors = { vmess:'#60a5fa', vless:'#a78bfa', trojan:'#f87171', ss:'#34d399', ssr:'#22d3ee' };
+    const labels = { vmess:'VMess', vless:'VLESS', trojan:'Trojan', ss:'SS', ssr:'SSR' };
+
+    let html = `<div class="stat-chip"><div class="stat-dot" style="background:#cbd5e1"></div> All: ${allKeys.length}</div>`;
+    for (const [proto, cnt] of Object.entries(counts)) {
+      html += `<div class="stat-chip"><div class="stat-dot" style="background:${colors[proto]||'#cbd5e1'}"></div> ${labels[proto]||proto}: ${cnt}</div>`;
+    }
+
+    const bar = document.getElementById('statsBar');
+    bar.innerHTML = html;
+    bar.style.display = 'flex';
+  }
+
+  function renderFilterTabs() {
+    const protocols = [...new Set(allKeys.map(k => k.protocol))];
+    const labels = { vmess:'VMess', vless:'VLESS', trojan:'Trojan', ss:'Shadowsocks', ssr:'SSR' };
+
+    let html = `<div class="tab ${currentFilter==='all'?'active':''}" onclick="setFilter('all')">All (${allKeys.length})</div>`;
+    for (const p of protocols) {
+      const cnt = allKeys.filter(k => k.protocol === p).length;
+      html += `<div class="tab ${currentFilter===p?'active':''}" onclick="setFilter('${p}')">${labels[p]||p} (${cnt})</div>`;
+    }
+
+    const tabs = document.getElementById('filterTabs');
+    tabs.innerHTML = html;
+    tabs.style.display = 'flex';
+  }
+
+  function setFilter(f) {
+    currentFilter = f;
+    renderFilterTabs();
+    renderKeys();
+  }
+
+  function renderKeys() {
+    const filtered = currentFilter === 'all' ? allKeys : allKeys.filter(k => k.protocol === currentFilter);
+    const container = document.getElementById('keysContainer');
+
+    if (filtered.length === 0) {
+      container.innerHTML = '<div class="empty-state"><div class="empty-icon">🔍</div><div class="empty-title">ရှာမတွေ့ပါ</div></div>';
+      return;
+    }
+
+    container.innerHTML = filtered.map((key, i) => renderKeyCard(key, i)).join('');
+  }
+
+  function renderKeyCard(key, idx) {
+    const badgeClass = `badge-${key.protocol === 'ss' ? 'ss' : key.protocol}`;
+    const labels = { vmess:'VMess', vless:'VLESS', trojan:'Trojan', ss:'SS', ssr:'SSR' };
+    const proto = labels[key.protocol] || key.protocol.toUpperCase();
+
+    let infoChips = '';
+    if (key.server) infoChips += `<div class="info-chip">🌐 ${key.server}</div>`;
+    if (key.port)   infoChips += `<div class="info-chip">🔌 ${key.port}</div>`;
+    if (key.network) infoChips += `<div class="info-chip">📡 ${key.network}</div>`;
+    if (key.tls || key.security) infoChips += `<div class="info-chip">🔒 ${key.tls || key.security}</div>`;
+    if (key.method) infoChips += `<div class="info-chip">🔐 ${key.method}</div>`;
+
+    const shortRaw = key.raw.length > 70 ? key.raw.slice(0, 70) + '...' : key.raw;
+
+    return `
+    <div class="key-card" id="card-${idx}">
+      <div class="key-header">
+        <div class="key-type-badge">
+          <span class="protocol-badge ${badgeClass}">${proto}</span>
+          <span class="key-name">${escHtml(key.name)}</span>
+        </div>
+      </div>
+      ${infoChips ? `<div class="key-info">${infoChips}</div>` : ''}
+      <div class="key-link-box" id="linkbox-${idx}">${escHtml(shortRaw)}</div>
+      <div class="key-actions">
+        <button class="btn-copy" id="copybtn-${idx}" onclick="copyKey(${idx})">
+          <span>📋</span> Copy Key
+        </button>
+        <button class="btn-expand" onclick="toggleExpand(${idx})">⤢</button>
+      </div>
+    </div>`;
+  }
+
+  function toggleExpand(idx) {
+    const box = document.getElementById(`linkbox-${idx}`);
+    const key = allKeys[idx];
+    if (box.classList.contains('expanded')) {
+      box.classList.remove('expanded');
+      box.textContent = key.raw.length > 70 ? key.raw.slice(0, 70) + '...' : key.raw;
+    } else {
+      box.classList.add('expanded');
+      box.textContent = key.raw;
+    }
+  }
+
+  function copyKey(idx) {
+    const key = allKeys[idx];
+    navigator.clipboard.writeText(key.raw).then(() => {
+      const btn = document.getElementById(`copybtn-${idx}`);
+      btn.classList.add('copied');
+      btn.innerHTML = '<span>✅</span> Copied!';
+      showToast('Copied to clipboard!');
+      setTimeout(() => {
+        btn.classList.remove('copied');
+        btn.innerHTML = '<span>📋</span> Copy Key';
+      }, 2000);
+    }).catch(() => {
+      const ta = document.createElement('textarea');
+      ta.value = key.raw;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      showToast('Copied to clipboard!');
+    });
+    
+    // Haptic feedback if in telegram
+    if (tg && tg.HapticFeedback) {
+      tg.HapticFeedback.impactOccurred('light');
+    }
+  }
+
+  function renderCopyAll() {
+    const protocols = [...new Set(allKeys.map(k => k.protocol))];
+    const labels = { vmess:'VMess', vless:'VLESS', trojan:'Trojan', ss:'SS', ssr:'SSR' };
+
+    let html = `<button class="btn-copy-all btn-copy-all-all" onclick="copyAllKeys('all')">📋 Copy All (${allKeys.length})</button>`;
+    for (const p of protocols) {
+      const cnt = allKeys.filter(k => k.protocol === p).length;
+      html += `<button class="btn-copy-all btn-copy-all-${p}" onclick="copyAllKeys('${p}')">📋 ${labels[p]||p} (${cnt})</button>`;
+    }
+
+    document.getElementById('copyAllBtns').innerHTML = html;
+    document.getElementById('copyAllSection').style.display = 'block';
+  }
+
+  function copyAllKeys(proto) {
+    const keys = proto === 'all' ? allKeys : allKeys.filter(k => k.protocol === proto);
+    const text = keys.map(k => k.raw).join('\n');
+    navigator.clipboard.writeText(text).then(() => {
+      showToast(`Copied ${keys.length} keys!`);
+    }).catch(() => {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      showToast(`Copied ${keys.length} keys!`);
+    });
+    
+    if (tg && tg.HapticFeedback) {
+      tg.HapticFeedback.notificationOccurred('success');
+    }
+  }
+
+  // ─── UI Helpers ───────────────────────────────────────────────
+
+  function showLoading() {
+    document.getElementById('keysContainer').innerHTML = `
+      <div class="loading">
+        <div class="spinner"></div>
+        <div>Extracting keys from link...</div>
+      </div>`;
+    document.getElementById('statsBar').style.display = 'none';
+    document.getElementById('filterTabs').style.display = 'none';
+    document.getElementById('copyAllSection').style.display = 'none';
+  }
+
+  function hideLoading() { }
+
+  function showEmpty() {
+    document.getElementById('keysContainer').innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">😕</div>
+        <div class="empty-title">No Keys Found</div>
+        <div class="empty-desc">The link does not contain any valid VMess, VLESS, Trojan, or Shadowsocks keys.</div>
+      </div>`;
+    document.getElementById('statsBar').style.display = 'none';
+    document.getElementById('filterTabs').style.display = 'none';
+    document.getElementById('copyAllSection').style.display = 'none';
+  }
+
+  function showError(msg) {
+    const box = document.getElementById('errorBox');
+    box.textContent = '⚠️ ' + msg;
+    box.style.display = 'block';
+  }
+
+  function hideError() {
+    document.getElementById('errorBox').style.display = 'none';
+  }
+
+  function clearAll() {
+    document.getElementById('subInput').value = '';
+    document.getElementById('keysContainer').innerHTML = '';
+    document.getElementById('statsBar').style.display = 'none';
+    document.getElementById('filterTabs').style.display = 'none';
+    document.getElementById('copyAllSection').style.display = 'none';
+    hideError();
+    allKeys = [];
+    currentFilter = 'all';
+    
+    if (tg && tg.HapticFeedback) {
+      tg.HapticFeedback.impactOccurred('light');
+    }
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+  }
+
+  function escHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+</script>
+</body>
+</html>

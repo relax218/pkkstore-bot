@@ -1,38 +1,54 @@
-# Telegram Sub Link Changer Bot
+# PKKStore Sub Link Changer & Key Extractor Bot
 
-ဒီ Bot ဟာ user တွေပို့လိုက်တဲ့ sub link တွေထဲက domain တွေကို owner သတ်မှတ်ထားတဲ့အတိုင်း ပြောင်းလဲပြီး ပြန်ပို့ပေးမယ့် bot ဖြစ်ပါတယ်။
+This is a Telegram Bot combined with a Mini Web App designed for PKKStore. It automatically replaces specific subdomains in subscription links and provides a beautiful UI to extract and copy individual VPN keys (VMess, VLESS, Trojan, Shadowsocks).
 
-## ပါဝင်တဲ့ Feature များ
+## Features
 
-1. **User များအတွက်:**
-   - Link တစ်ခုပို့လိုက်တာနဲ့ သတ်မှတ်ထားတဲ့ domain တွေပါရင် အလိုအလျောက် ပြောင်းလဲပြီး ပြန်ပို့ပေးပါမယ်။
-   - ဥပမာ: `https://vpn.kiwihub.top:8000/...` လို့ ပို့လိုက်ရင် `https://pkk1.kiwihub.top:8000/...` လို့ ပြောင်းပေးပါမယ်။
+1. **Subdomain Replacement:**
+   - Users send a subscription link to the bot.
+   - The bot checks if the link contains specific domains (e.g., `vpn.domain`) and replaces them (e.g., `pkk1.domain`).
+   - The bot replies with the modified link and an inline button to open the Mini Web App.
 
-2. **Owner အတွက်:**
-   - Telegram ကနေပဲ rule တွေကို အလွယ်တကူ ပြင်ဆင်နိုင်ပါတယ်။
-   - `/addrule <old> <new>` - Rule အသစ်ထည့်ရန် (သို့) ရှိပြီးသားကို ပြင်ရန်
-   - `/delrule <old>` - Rule ကို ဖျက်ရန်
-   - `/rules` - လက်ရှိ rule အားလုံးကို ကြည့်ရန်
+2. **Owner Commands:**
+   - `/addrule <old> <new>` - Add or update a mapping rule.
+   - `/delrule <old>` - Delete a mapping rule.
+   - `/rules` - List all current mapping rules.
 
-## အသုံးပြုရန် ပြင်ဆင်ခြင်း
+3. **PKKStore Mini Web App:**
+   - Extracts keys from standard subscription links or base64 encoded strings.
+   - Supports **VMess, VLESS, Trojan, Shadowsocks (SS), and SSR**.
+   - Clean, dark-themed UI branded for PKKStore.
+   - Filter keys by protocol.
+   - Copy individual keys or bulk copy by protocol.
 
-1. BotFather (`@BotFather`) ဆီကနေ Bot token အသစ်တစ်ခု တောင်းပါ။
-2. `telegram_bot.py` ဖိုင်ကို ဖွင့်ပြီး အောက်ပါအချက်တွေကို ပြင်ပါ:
-   - `BOT_TOKEN = "YOUR_BOT_TOKEN_HERE"` နေရာမှာ BotFather ပေးတဲ့ token ကို ထည့်ပါ။
-   - `OWNER_ID = 123456789` နေရာမှာ သင့်ရဲ့ Telegram User ID ကို ထည့်ပါ။ (ID ကို `@userinfobot` ကနေ ကြည့်နိုင်ပါတယ်)
-3. လိုအပ်တဲ့ library တွေကို install လုပ်ပါ:
-   ```bash
-   pip install -r requirements.txt
-   ```
-4. Bot ကို run ပါ:
-   ```bash
-   python telegram_bot.py
-   ```
+## Setup Instructions
 
-## Default Rules
+### 1. Bot Setup
+1. Get a Bot Token from [@BotFather](https://t.me/BotFather) on Telegram.
+2. Get your Telegram User ID from [@userinfobot](https://t.me/userinfobot).
+3. Open `telegram_bot.py` and replace:
+   - `BOT_TOKEN = "YOUR_BOT_TOKEN_HERE"` with your actual token.
+   - `OWNER_ID = 123456789` with your actual User ID.
 
-စတင် run တဲ့အခါ အောက်ပါ rule တွေ အလိုအလျောက် ပါဝင်နေပါမယ်:
-- `vpn.kiwihub.top` -> `pkk1.kiwihub.top`
-- `zmt.hiddenvpn.beer` -> `pkk.hiddenvpn.beer`
+### 2. Hosting the Mini Web App
+Since this repository is hosted on GitHub Pages, the Mini Web App is automatically available at:
+`https://relax218.github.io/pkkstore-bot/webapp/index.html`
 
-Rule တွေကို ပြောင်းလဲလိုက်ရင် `mapping_rules.json` ဖိုင်ထဲမှာ အလိုအလျောက် သိမ်းဆည်းသွားမှာ ဖြစ်တဲ့အတွက် bot ကို ပိတ်ပြီး ပြန်ဖွင့်လည်း rule တွေ ပျောက်မသွားပါဘူး။
+*(Note: Ensure GitHub Pages is enabled in the repository settings: Settings > Pages > Source: Deploy from a branch > Branch: main, /root)*
+
+### 3. Running the Bot
+Install the required dependencies:
+```bash
+pip install -r requirements.txt
+```
+
+Run the bot:
+```bash
+python telegram_bot.py
+```
+
+## Deployment Options for the Bot
+You can run the `telegram_bot.py` script on:
+- A VPS (Ubuntu, Debian, etc.)
+- Heroku / Render (with slight modifications for webhooks if needed)
+- Your local computer (for testing)
